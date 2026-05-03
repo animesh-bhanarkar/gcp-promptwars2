@@ -13,7 +13,8 @@
     profile: saved.profile || { firstTime: null, registered: null, location: '' },
     currentStep: saved.currentStep || 0,
     chatHistory: saved.chatHistory || [],
-    planGenerated: saved.planGenerated || false
+    planGenerated: saved.planGenerated || false,
+    planHtml: saved.planHtml || ''
   };
 
   function saveState() {
@@ -187,13 +188,11 @@
       initChat();
     }
 
-    // Generate AI plan if not yet done
+    // Generate AI plan if not yet done, or restore from saved state
     if (!state.planGenerated) {
       generatePlan();
-    } else {
-      // Plan card already in DOM cache; show from storage if available
-      const cached = saved.planHtml;
-      if (cached) renderPlanCard(cached);
+    } else if (state.planHtml) {
+      renderPlanCard(state.planHtml);
     }
   }
 
@@ -215,13 +214,14 @@
     state.currentStep = 0;
     state.chatHistory = [];
     state.planGenerated = false;
+    state.planHtml = '';
     document.querySelectorAll('.quiz-opt').forEach(b => b.classList.remove('selected'));
     $('input-location').value = '';
     $('firstimer-banner').classList.add('hidden');
     $('unreg-alert').classList.add('hidden');
     $('btn-start').textContent = 'Get Started →';
-    const planCard = $('plan-card');
-    if (planCard) planCard.remove();
+    const planWrapEl = $('plan-wrap');
+    if (planWrapEl) planWrapEl.innerHTML = '';
     goToQuiz(1);
     showScreen('quiz');
   });
@@ -311,9 +311,10 @@
         <div class="plan-steps">${stepsHtml}</div>
         <div class="plan-reminder">💪 ${plan.reminder || ''}</div>`;
 
-      renderPlanCard(html);
+      state.planHtml = html;
       state.planGenerated = true;
-      try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...state, planHtml: html })); } catch {}
+      renderPlanCard(html);
+      saveState();
     } catch {
       planWrap.innerHTML = `<div class="plan-demo-note">⚠️ Could not generate plan. Check your connection and try reloading.</div>`;
     }
