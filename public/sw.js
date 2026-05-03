@@ -1,40 +1,25 @@
-const CACHE_NAME = 'smartvenue-lite-v1';
-const ASSETS_TO_CACHE = [
-  '/',
-  '/index.html',
-  '/css/style.css',
-  '/js/app.js',
-  '/manifest.json'
-];
+// sw.js — CivicGuide Service Worker
+// Caches static assets for faster loads and basic offline support
 
-self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => {
-      return cache.addAll(ASSETS_TO_CACHE);
-    })
-  );
+const CACHE = 'civicguide-v1';
+const ASSETS = ['/', '/index.html', '/style.css', '/app.js', '/manifest.json'];
+
+self.addEventListener('install', e => {
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
+  self.skipWaiting();
 });
 
-self.addEventListener('fetch', event => {
-  // If it's an API request, try network first, then cache (for offline capability)
-  if (event.request.url.includes('/state') || event.request.url.includes('/best-option')) {
-    event.respondWith(
-      fetch(event.request)
-        .then(response => {
-          const clonedResponse = response.clone();
-          caches.open('smartvenue-api-cache').then(cache => {
-            cache.put(event.request, clonedResponse);
-          });
-          return response;
-        })
-        .catch(() => caches.match(event.request))
-    );
-  } else {
-    // For static assets, Cache-First strategy
-    event.respondWith(
-      caches.match(event.request).then(response => {
-        return response || fetch(event.request);
-      })
-    );
-  }
+self.addEventListener('activate', e => {
+  e.waitUntil(caches.keys().then(keys =>
+    Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
+  ));
+  self.clients.claim();
+});
+
+self.addEventListener('fetch', e => {
+  // Only cache GET requests for same-origin static assets
+  if (e.request.method !== 'GET' || e.request.url.includes('/api/')) return;
+  e.respondWith(
+    caches.match(e.request).then(cached => cached || fetch(e.request))
+  );
 });

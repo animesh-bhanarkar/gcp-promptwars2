@@ -1,164 +1,199 @@
-const express = require('express');
-const cors = require('cors');
-const path = require('path');
+// server.js — CivicGuide Backend v2
+// Serves static frontend + proxies Gemini API (multi-turn, rate-limited)
 
+import express from 'express';
+import { fileURLToPath } from 'url';
+import path from 'path';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
-app.use(cors());
+const PORT = process.env.PORT || 8080;
+
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// In-Memory Data Store (Lightweight)
-let state = {
-  demoMode: false,
-  zones: {
-    A: { id: 'A', name: 'Zone A', crowd: 'Low' },
-    B: { id: 'B', name: 'Zone B', crowd: 'Medium' },
-    C: { id: 'C', name: 'Zone C', crowd: 'High' },
-    D: { id: 'D', name: 'Zone D', crowd: 'Low' }
-  },
-  queues: {
-    Gate1: { id: 'Gate1', name: 'Gate 1', type: 'Gate', time: 5 },
-    Gate2: { id: 'Gate2', name: 'Gate 2', type: 'Gate', time: 15 },
-    FoodA: { id: 'FoodA', name: 'Food A', type: 'Food', time: 10 },
-    FoodB: { id: 'FoodB', name: 'Food B', type: 'Food', time: 2 }
+// ── In-Memory Rate Limiter (no extra packages) ────────────────────────────────
+const rateMap = new Map(); // ip → { count, resetAt }
+const RATE_LIMIT = 20;     // max requests
+const RATE_WINDOW = 60_000; // per 60 seconds
+
+function rateLimited(req, res, next) {
+  const ip = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.socket.remoteAddress || 'unknown';
+  const now = Date.now();
+  const entry = rateMap.get(ip);
+
+  if (!entry || now > entry.resetAt) {
+    rateMap.set(ip, { count: 1, resetAt: now + RATE_WINDOW });
+    return next();
   }
-};
-
-// Simplified Venue Graph for Routing
-const venueGraph = {
-  Gate1: ['A'],
-  Gate2: ['B'],
-  A: ['Gate1', 'B', 'C', 'FoodA'],
-  B: ['Gate2', 'A', 'D', 'FoodB'],
-  C: ['A', 'D', 'Seat'],
-  D: ['B', 'C', 'Seat'],
-  FoodA: ['A'],
-  FoodB: ['B'],
-  Seat: ['C', 'D']
-};
-
-/**
- * Helper: Find shortest path using BFS.
- * Optional filter to exclude specific nodes (e.g., highly crowded zones).
- */
-function findShortestPath(start, end, excludeNodes = []) {
-  const queue = [[start]];
-  const visited = new Set([start]);
-
-  while (queue.length > 0) {
-    const path = queue.shift();
-    const node = path[path.length - 1];
-
-    if (node === end) {
-      return path;
-    }
-
-    const neighbors = venueGraph[node] || [];
-    for (let neighbor of neighbors) {
-      if (!visited.has(neighbor) && !excludeNodes.includes(neighbor)) {
-        visited.add(neighbor);
-        queue.push([...path, neighbor]);
-      }
-    }
+  if (entry.count >= RATE_LIMIT) {
+    return res.status(429).json({ error: 'Too many requests. Please wait a moment before asking again.' });
   }
-  return null; // No path found
+  entry.count++;
+  next();
 }
 
-/**
- * Route Suggestion Logic
- */
-app.get('/route', (req, res) => {
-  const { from, to } = req.query;
-  if (!from || !to) {
-    return res.status(400).json({ error: 'Missing from/to parameters' });
-  }
-
-  // Find high crowd zones to avoid
-  const highCrowdZones = Object.values(state.zones)
-    .filter(z => z.crowd === 'High')
-    .map(z => z.id);
-
-  // Try to find path avoiding High crowd zones
-  let path = findShortestPath(from, to, highCrowdZones);
-  
-  // If no path avoiding High crowd, fall back to any path
-  if (!path) {
-    path = findShortestPath(from, to, []);
-  }
-
-  res.json({ route: path });
-});
-
-// API Endpoints
-app.get('/zones', (req, res) => {
-  res.json(Object.values(state.zones));
-});
-
-app.get('/queues', (req, res) => {
-  res.json(Object.values(state.queues));
-});
-
-app.get('/state', (req, res) => {
-  res.json(state);
-});
-
-// Admin update endpoint
-app.post('/update', (req, res) => {
-  const { type, id, updateData } = req.body;
-  if (!type || !id || !updateData) return res.status(400).json({ error: 'Invalid payload' });
-
-  if (type === 'zone' && state.zones[id]) {
-    state.zones[id] = { ...state.zones[id], ...updateData };
-  } else if (type === 'queue' && state.queues[id]) {
-    state.queues[id] = { ...state.queues[id], ...updateData };
-  } else if (type === 'system') {
-    if (updateData.demoMode !== undefined) {
-      state.demoMode = updateData.demoMode;
-    }
-  } else {
-    return res.status(404).json({ error: 'Entity not found' });
-  }
-  res.json({ success: true, state });
-});
-
-// Best Option Endpoint
-app.get('/best-option', (req, res) => {
-  // Find shortest queue for Gates
-  const gates = Object.values(state.queues).filter(q => q.type === 'Gate');
-  const bestGate = gates.reduce((prev, curr) => (curr.time < prev.time ? curr : prev));
-
-  // Find shortest queue for Food
-  const foods = Object.values(state.queues).filter(q => q.type === 'Food');
-  const bestFood = foods.reduce((prev, curr) => (curr.time < prev.time ? curr : prev));
-
-  res.json({
-    bestGate,
-    bestFood
-  });
-});
-
-// Hybrid Auto-Randomization (Demo Mode)
+// Clean up stale entries every 5 minutes
 setInterval(() => {
-  if (state.demoMode) {
-    // Randomize queue times slightly
-    Object.keys(state.queues).forEach(key => {
-      let change = Math.floor(Math.random() * 5) - 2; // -2 to +2
-      let newTime = Math.max(1, state.queues[key].time + change);
-      state.queues[key].time = newTime;
+  const now = Date.now();
+  for (const [ip, entry] of rateMap) {
+    if (now > entry.resetAt) rateMap.delete(ip);
+  }
+}, 300_000);
+
+// ── Gemini Config ─────────────────────────────────────────────────────────────
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
+const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
+
+const SYSTEM_PROMPT = `You are CivicGuide, a friendly and knowledgeable civic education assistant 
+specialized in U.S. elections. Your role is to:
+
+1. Explain election processes clearly in simple, jargon-free language
+2. Guide users step-by-step based on their specific situation
+3. Provide accurate, actionable next steps
+4. Be encouraging, especially to first-time voters
+5. Keep answers concise (2–4 short paragraphs max)
+6. Always end with one clear "Next Step" the user can take today
+
+IMPORTANT RULES:
+- Never give partisan opinions or endorse any candidate/party
+- If unsure about state-specific details, direct users to vote.gov
+- Always be warm, encouraging, and accessible
+- Use bullet points for lists of steps
+- Remember prior messages in this conversation and build on them`;
+
+// ── POST /api/chat — Multi-turn Gemini proxy ──────────────────────────────────
+app.post('/api/chat', rateLimited, async (req, res) => {
+  if (!GEMINI_API_KEY) {
+    return res.status(503).json({
+      error: '🔑 AI chat is not configured. Add a GEMINI_API_KEY environment variable to enable it.',
+      demoMode: true
+    });
+  }
+
+  const { message, context, history = [] } = req.body;
+  if (!message) return res.status(400).json({ error: 'message is required' });
+
+  // Build multi-turn contents array
+  const contents = [];
+
+  // 1. Inject user profile as synthetic first exchange
+  if (context && Object.values(context).some(Boolean)) {
+    contents.push({
+      role: 'user',
+      parts: [{ text: `My profile: ${JSON.stringify(context)}. Personalise all your answers based on this.` }]
+    });
+    contents.push({
+      role: 'model',
+      parts: [{ text: 'Got it! I\'ll keep your profile in mind throughout our conversation.' }]
+    });
+  }
+
+  // 2. Replay prior conversation turns (multi-turn memory)
+  for (const turn of history) {
+    contents.push({
+      role: turn.role === 'bot' ? 'model' : 'user',
+      parts: [{ text: turn.text }]
+    });
+  }
+
+  // 3. Add current message
+  contents.push({ role: 'user', parts: [{ text: message }] });
+
+  try {
+    const geminiRes = await fetch(`${GEMINI_URL}?key=${GEMINI_API_KEY}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
+        contents,
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 600,
+          topP: 0.9
+        }
+      })
     });
 
-    // Occasionally change a zone's crowd level
-    if (Math.random() > 0.7) {
-      const zoneIds = Object.keys(state.zones);
-      const randomZone = zoneIds[Math.floor(Math.random() * zoneIds.length)];
-      const levels = ['Low', 'Medium', 'High'];
-      const randomLevel = levels[Math.floor(Math.random() * levels.length)];
-      state.zones[randomZone].crowd = randomLevel;
+    if (!geminiRes.ok) {
+      const err = await geminiRes.text();
+      console.error('Gemini error:', err);
+      return res.status(502).json({ error: 'AI service error. Please try again in a moment.' });
     }
-  }
-}, 5000); // Check every 5 seconds for demo updates
 
-const PORT = process.env.PORT || 8080;
-app.listen(PORT, () => {
-  console.log(`SmartVenue Lite running on port ${PORT}`);
+    const data = await geminiRes.json();
+    const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text || 'No response generated.';
+    res.json({ reply });
+  } catch (err) {
+    console.error('Fetch error:', err);
+    res.status(500).json({ error: 'Internal server error. Please try again.' });
+  }
 });
+
+// ── POST /api/plan — AI-generated personal action plan ───────────────────────
+app.post('/api/plan', rateLimited, async (req, res) => {
+  if (!GEMINI_API_KEY) {
+    return res.status(503).json({ error: 'AI not configured.', demoMode: true });
+  }
+
+  const { profile } = req.body;
+  const { firstTime, registered, location } = profile || {};
+
+  const prompt = `You are CivicGuide. Generate a personalized election action plan for this voter:
+- First-time voter: ${firstTime === 'yes' ? 'Yes' : 'No'}
+- Registration status: ${registered === 'yes' ? 'Registered' : 'Not registered / unsure'}
+- Location: ${location || 'Not specified'}
+
+Return ONLY a valid JSON object in this exact format (no markdown, no explanation):
+{
+  "greeting": "one warm sentence welcoming them personally",
+  "priority": "the single most important thing they must do RIGHT NOW (1 sentence)",
+  "steps": [
+    { "title": "step title", "action": "specific action to take", "urgent": true/false },
+    { "title": "step title", "action": "specific action to take", "urgent": false },
+    { "title": "step title", "action": "specific action to take", "urgent": false }
+  ],
+  "reminder": "one encouraging closing sentence"
+}`;
+
+  try {
+    const geminiRes = await fetch(`${GEMINI_URL}?key=${GEMINI_API_KEY}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.4, maxOutputTokens: 400 }
+      })
+    });
+
+    if (!geminiRes.ok) return res.status(502).json({ error: 'AI service error.' });
+
+    const data = await geminiRes.json();
+    let raw = data?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+
+    // Strip markdown code fences if present
+    raw = raw.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+
+    try {
+      const plan = JSON.parse(raw);
+      res.json({ plan });
+    } catch {
+      res.status(500).json({ error: 'Could not parse AI plan. Try again.' });
+    }
+  } catch (err) {
+    console.error('Plan error:', err);
+    res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
+// ── Health Check ──────────────────────────────────────────────────────────────
+app.get('/health', (_req, res) => res.json({
+  status: 'ok',
+  service: 'civicguide',
+  ai: GEMINI_API_KEY ? 'configured' : 'missing-key'
+}));
+
+// ── SPA Fallback ──────────────────────────────────────────────────────────────
+app.get('*', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+
+app.listen(PORT, () => console.log(`CivicGuide running on port ${PORT} · AI: ${GEMINI_API_KEY ? '✅ ready' : '⚠️  no key set'}`));

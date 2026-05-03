@@ -1,16 +1,16 @@
 {
-  "name": "SmartVenue Lite",
-  "short_name": "SmartVenue",
-  "description": "Venue navigation and crowd avoidance platform.",
-  "start_url": "/index.html",
+  "name": "CivicGuide — Election Assistant",
+  "short_name": "CivicGuide",
+  "description": "Your personalized AI assistant for the U.S. election process",
+  "start_url": "/",
   "display": "standalone",
-  "background_color": "#0f111a",
-  "theme_color": "#5e6ad2",
+  "background_color": "#0a0d14",
+  "theme_color": "#4f7ef7",
+  "orientation": "portrait-primary",
   "icons": [
-    {
-      "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iIzVlNmFkMiIvPjwvc3ZnPg==",
-      "sizes": "192x192",
-      "type": "image/svg+xml"
-    }
-  ]
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ],
+  "categories": ["education", "government"],
+  "lang": "en-US"
 }

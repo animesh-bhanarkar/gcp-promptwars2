@@ -1,137 +1,266 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>SmartVenue Lite</title>
-  <link rel="manifest" href="/manifest.json">
-  <link rel="stylesheet" href="/css/style.css">
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <meta name="description" content="CivicGuide — Personalized AI assistant for U.S. voter registration, election timelines, and polling stations."/>
+  <title>CivicGuide — Your Election Guide</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+  <link rel="manifest" href="manifest.json"/>
+  <meta name="theme-color" content="#4f7ef7"/>
+  <link rel="stylesheet" href="style.css"/>
 </head>
 <body>
-  <div class="app-container">
-    <header class="header glassmorphism">
-      <h1>SmartVenue ⚡</h1>
-      <span id="network-status" class="status-indicator online">Online</span>
-    </header>
 
-    <main>
-      <!-- Alerts -->
-      <section id="alerts" class="alerts-container">
-        <!-- Injected via JS -->
-      </section>
+<div class="bg-orbs" aria-hidden="true">
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+</div>
 
-      <!-- Best Options -->
-      <section class="card glassmorphism">
-        <h2>Best Option Now</h2>
-        <div class="split-info">
-          <div class="info-box">
-            <span class="label">Best Gate</span>
-            <span id="best-gate" class="value">--</span>
-          </div>
-          <div class="info-box">
-            <span class="label">Best Food</span>
-            <span id="best-food" class="value">--</span>
-          </div>
+<!-- ══ SCREEN 1 · WELCOME ═══════════════════════════════════════════════ -->
+<section id="screen-welcome" class="screen active">
+  <div class="welcome-card">
+    <div class="logo-badge">🗳️</div>
+    <h1 class="welcome-title">CivicGuide</h1>
+    <p class="welcome-subtitle">Your free, personalized AI assistant for the U.S. election process — from registration to casting your vote.</p>
+    <div class="feature-pills">
+      <span class="pill">✅ Step-by-step guidance</span>
+      <span class="pill">📅 Key deadlines</span>
+      <span class="pill">🤖 Gemini AI chat</span>
+      <span class="pill">📍 Find your polling place</span>
+    </div>
+    <button id="btn-start" class="btn-primary">Get Started <span class="btn-arrow">→</span></button>
+    <p class="welcome-note">Free · No sign-up · 30 seconds to personalise</p>
+  </div>
+</section>
+
+<!-- ══ SCREEN 2 · PROFILE QUIZ ══════════════════════════════════════════ -->
+<section id="screen-quiz" class="screen" aria-live="polite">
+  <div class="quiz-container">
+    <div class="progress-bar-wrap">
+      <div class="progress-track"><div id="quiz-progress" class="progress-fill"></div></div>
+      <span id="quiz-step-label" class="progress-label">Step 1 of 3</span>
+    </div>
+
+    <!-- Q1 -->
+    <div id="q1" class="quiz-step active">
+      <p class="quiz-eyebrow">Question 1 of 3</p>
+      <h2 class="quiz-question">Is this your first time voting?</h2>
+      <div class="quiz-options">
+        <button class="quiz-opt" data-q="firstTime" data-v="yes" id="q1-yes">
+          <span class="opt-icon">🌟</span><span class="opt-label">Yes, first time!</span><span class="opt-check"></span>
+        </button>
+        <button class="quiz-opt" data-q="firstTime" data-v="no" id="q1-no">
+          <span class="opt-icon">🔁</span><span class="opt-label">No, I've voted before</span><span class="opt-check"></span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Q2 -->
+    <div id="q2" class="quiz-step">
+      <p class="quiz-eyebrow">Question 2 of 3</p>
+      <h2 class="quiz-question">Do you know your voter registration status?</h2>
+      <div class="quiz-options">
+        <button class="quiz-opt" data-q="registered" data-v="yes" id="q2-yes">
+          <span class="opt-icon">📋</span><span class="opt-label">Yes, I'm registered</span><span class="opt-check"></span>
+        </button>
+        <button class="quiz-opt" data-q="registered" data-v="no" id="q2-no">
+          <span class="opt-icon">❓</span><span class="opt-label">Not sure / Not registered</span><span class="opt-check"></span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Q3 -->
+    <div id="q3" class="quiz-step">
+      <p class="quiz-eyebrow">Question 3 of 3 — optional</p>
+      <h2 class="quiz-question">Where are you located?</h2>
+      <p class="quiz-hint">Helps us show local polling stations and dates</p>
+      <div class="location-input-wrap">
+        <input type="text" id="input-location" class="location-input"
+          placeholder="e.g. California, Texas, New York…"
+          autocomplete="address-level1" maxlength="60"
+          aria-label="Your state or city"/>
+      </div>
+      <div class="quiz-actions">
+        <button id="btn-skip-location" class="btn-ghost">Skip</button>
+        <button id="btn-confirm-location" class="btn-primary">Continue →</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ SCREEN 3 · MAIN APP ═══════════════════════════════════════════════ -->
+<section id="screen-app" class="screen">
+
+  <nav class="app-nav" aria-label="Main navigation">
+    <div class="nav-brand">🗳️ CivicGuide</div>
+    <div class="nav-tabs" role="tablist">
+      <button class="nav-tab active" id="tab-guide" role="tab" aria-selected="true" aria-controls="panel-guide">📋 Guide</button>
+      <button class="nav-tab" id="tab-chat" role="tab" aria-selected="false" aria-controls="panel-chat">💬 Ask AI</button>
+      <button class="nav-tab" id="tab-timeline" role="tab" aria-selected="false" aria-controls="panel-timeline">📅 Timeline</button>
+      <button class="nav-tab" id="tab-maps" role="tab" aria-selected="false" aria-controls="panel-maps">📍 Find Polls</button>
+    </div>
+    <button id="btn-restart" class="nav-restart" aria-label="Start over">↺ Restart</button>
+  </nav>
+
+  <!-- ── Guide Panel ──────────────────────────────────────────────────── -->
+  <div id="panel-guide" class="panel active" role="tabpanel">
+
+    <!-- First-timer checklist (shown only for new voters) -->
+    <div id="firstimer-banner" class="banner-firsttime hidden">
+      <div class="banner-icon">🌟</div>
+      <div>
+        <strong>Welcome, first-time voter!</strong>
+        <p>We've simplified everything just for you. Complete each step below — you've got this!</p>
+      </div>
+    </div>
+
+    <!-- Unregistered alert -->
+    <div id="unreg-alert" class="unreg-alert hidden">
+      <span>🚨</span>
+      <div>
+        <strong>You're not registered yet!</strong>
+        <p>Start with Step 1 — it only takes ~5 minutes at <a href="https://vote.gov" target="_blank" rel="noopener" class="link">vote.gov</a></p>
+      </div>
+    </div>
+
+    <!-- Step Navigator -->
+    <div class="step-nav" role="list">
+      <button class="step-nav-btn active" data-step="0" role="listitem"><span class="step-num">1</span><span>Register</span></button>
+      <div class="step-connector" aria-hidden="true"></div>
+      <button class="step-nav-btn" data-step="1" role="listitem"><span class="step-num">2</span><span>Verify</span></button>
+      <div class="step-connector" aria-hidden="true"></div>
+      <button class="step-nav-btn" data-step="2" role="listitem"><span class="step-num">3</span><span>Vote</span></button>
+      <div class="step-connector" aria-hidden="true"></div>
+      <button class="step-nav-btn" data-step="3" role="listitem"><span class="step-num">4</span><span>Election Day</span></button>
+    </div>
+
+    <div id="step-card" class="step-card" aria-live="polite"></div>
+
+    <div class="step-nav-controls">
+      <button id="btn-prev-step" class="btn-ghost" disabled>← Back</button>
+      <button id="btn-next-step" class="btn-primary">Next Step →</button>
+    </div>
+
+    <!-- AI Personal Action Plan -->
+    <div class="plan-card-wrap">
+      <div class="plan-card-header">
+        <span class="plan-card-icon">🤖</span>
+        <div>
+          <strong>Your AI-Generated Action Plan</strong>
+          <p>Personalized by Gemini based on your profile</p>
         </div>
-      </section>
+      </div>
+      <div id="plan-wrap" class="plan-wrap"></div>
+    </div>
 
-      <!-- Map & Routing -->
-      <section class="card glassmorphism">
-        <h2>Venue Map</h2>
-        
-        <!-- Legend -->
-        <div class="legend">
-          <div class="legend-item"><span class="color-box low"></span> Low</div>
-          <div class="legend-item"><span class="color-box medium"></span> Medium</div>
-          <div class="legend-item"><span class="color-box high"></span> High</div>
-          <div class="legend-item"><span class="color-box user-zone"></span> You</div>
-        </div>
-
-        <div class="map-container">
-          <svg viewBox="0 0 400 300" class="venue-svg" id="venue-map">
-            <!-- Background base -->
-            <rect width="400" height="300" fill="#1e1e2f" rx="15"/>
-            
-            <!-- Nodes (Gates, Zones, Food, Seats) -->
-            <!-- Gates -->
-            <rect id="node-Gate1" x="20" y="20" width="60" height="40" rx="5" class="svg-node gate"/>
-            <text x="50" y="45" class="svg-label">Gate 1</text>
-            
-            <rect id="node-Gate2" x="320" y="20" width="60" height="40" rx="5" class="svg-node gate"/>
-            <text x="350" y="45" class="svg-label">Gate 2</text>
-
-            <!-- Food -->
-            <rect id="node-FoodA" x="20" y="240" width="60" height="40" rx="5" class="svg-node food"/>
-            <text x="50" y="265" class="svg-label">Food A</text>
-
-            <rect id="node-FoodB" x="320" y="240" width="60" height="40" rx="5" class="svg-node food"/>
-            <text x="350" y="265" class="svg-label">Food B</text>
-
-            <!-- Zones -->
-            <rect id="node-A" x="120" y="80" width="70" height="60" rx="10" class="svg-node zone"/>
-            <text x="155" y="115" class="svg-label">Zone A</text>
-
-            <rect id="node-B" x="210" y="80" width="70" height="60" rx="10" class="svg-node zone"/>
-            <text x="245" y="115" class="svg-label">Zone B</text>
-
-            <rect id="node-C" x="120" y="160" width="70" height="60" rx="10" class="svg-node zone"/>
-            <text x="155" y="195" class="svg-label">Zone C</text>
-
-            <rect id="node-D" x="210" y="160" width="70" height="60" rx="10" class="svg-node zone"/>
-            <text x="245" y="195" class="svg-label">Zone D</text>
-
-            <!-- Seat Block -->
-            <rect id="node-Seat" x="160" y="240" width="80" height="40" rx="5" class="svg-node seat"/>
-            <text x="200" y="265" class="svg-label">Seats</text>
-          </svg>
-        </div>
-
-        <div class="route-planner">
-          <h3>Suggested Route</h3>
-          <div class="form-group row">
-            <select id="route-from">
-             <option value="Gate1">Gate 1</option>
-             <option value="Gate2">Gate 2</option>
-             <option value="Seat">Seats</option>
-            </select>
-            <span>➔</span>
-            <select id="route-to">
-             <option value="Seat" selected>Seats</option>
-             <option value="FoodA">Food A</option>
-             <option value="FoodB">Food B</option>
-             <option value="Gate1">Gate 1</option>
-             <option value="Gate2">Gate 2</option>
-            </select>
-          </div>
-          
-          <div class="form-group row">
-             <span>Your Zone: </span>
-             <select id="user-zone">
-               <option value="None">None</option>
-               <option value="A">Zone A</option>
-               <option value="B">Zone B</option>
-               <option value="C">Zone C</option>
-               <option value="D">Zone D</option>
-             </select>
-          </div>
-
-          <button id="find-route-btn" class="btn primary">Find Least Crowded Path</button>
-          
-          <div id="route-result" class="route-result"></div>
-        </div>
-      </section>
-
-      <!-- Live Queues -->
-      <section class="card glassmorphism">
-        <h2>Live Queues</h2>
-        <div id="queues-list" class="queue-list">
-          <!-- Injected via JS -->
-        </div>
-      </section>
-    </main>
+    <!-- Celebration overlay (hidden) -->
+    <div id="celebrate-overlay" class="celebrate-overlay hidden" aria-live="assertive">
+      <div class="celebrate-card">
+        <div class="celebrate-emoji">🎉</div>
+        <h2>You're All Set!</h2>
+        <p>You've completed every step of the election guide. Now go make your voice heard!</p>
+        <button id="btn-celebrate-close" class="btn-primary">Go Vote! 🗳️</button>
+      </div>
+    </div>
   </div>
 
-  <script src="/js/app.js"></script>
+  <!-- ── Chat Panel ─────────────────────────────────────────────────────── -->
+  <div id="panel-chat" class="panel" role="tabpanel">
+    <div class="chat-header">
+      <div class="chat-avatar">🤖</div>
+      <div>
+        <strong>CivicGuide AI</strong>
+        <p>Powered by Gemini 1.5 Flash</p>
+      </div>
+      <div id="chat-status" class="chat-status online" aria-live="polite">● Online</div>
+    </div>
+
+    <div id="chat-messages" class="chat-messages" aria-live="polite" role="log"></div>
+
+    <div class="chat-input-area">
+      <div id="suggested-qs" class="suggested-questions">
+        <p class="suggest-label">Quick questions:</p>
+        <div class="suggest-pills">
+          <button class="suggest-pill" data-q="How do I register to vote?">How do I register?</button>
+          <button class="suggest-pill" data-q="What ID do I need to vote?">What ID do I need?</button>
+          <button class="suggest-pill" data-q="Can I vote by mail?">Can I vote by mail?</button>
+          <button class="suggest-pill" data-q="What happens on Election Day step by step?">What happens Election Day?</button>
+          <button class="suggest-pill" data-q="I'm a first-time voter. What's the most important thing I should do right now?">I'm a first-timer — where do I start?</button>
+        </div>
+      </div>
+      <div class="chat-input-row">
+        <textarea id="chat-input" class="chat-input" placeholder="Ask anything about elections…" rows="1" maxlength="500" aria-label="Your question"></textarea>
+        <button id="btn-send" class="btn-send" aria-label="Send">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+            <line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Timeline Panel ─────────────────────────────────────────────────── -->
+  <div id="panel-timeline" class="panel" role="tabpanel">
+    <div class="timeline-header">
+      <h2>📅 Key Election Dates</h2>
+      <p id="timeline-note" class="timeline-note"></p>
+    </div>
+    <div id="timeline-list" class="timeline-list" role="list"></div>
+    <div class="timeline-footer">
+      ⚠️ Dates vary by state. Always confirm at <a href="https://vote.gov" target="_blank" rel="noopener" class="link">vote.gov</a>
+    </div>
+  </div>
+
+  <!-- ── Maps Panel ─────────────────────────────────────────────────────── -->
+  <div id="panel-maps" class="panel" role="tabpanel">
+    <div class="maps-header">
+      <h2>📍 Find Your Polling Place</h2>
+      <p>Search early voting sites, drop boxes, and Election Day polling stations near you.</p>
+    </div>
+
+    <!-- Google's Official Polling Place Finder (embedded) -->
+    <div class="google-finder-wrap">
+      <div class="google-finder-badge">🔍 Powered by Google</div>
+      <a id="btn-google-polls" href="https://www.google.com/search?q=polling+place+near+me" target="_blank" rel="noopener" class="btn-primary google-finder-btn">
+        🗺️ Open Google's Official Polling Place Finder
+      </a>
+      <p class="maps-hint">Google shows your exact polling place, hours, and accessibility info.</p>
+    </div>
+
+    <div class="maps-divider">or search manually below</div>
+
+    <div class="maps-search-row">
+      <input type="text" id="maps-search-input" class="location-input" placeholder="Enter address or zip code…" aria-label="Search address"/>
+      <button id="btn-maps-search" class="btn-primary">Search</button>
+      <button id="btn-use-location" class="btn-ghost">📍 My Location</button>
+    </div>
+
+    <div id="maps-embed" class="maps-embed-wrap">
+      <iframe id="maps-iframe" class="maps-iframe" title="Google Maps Polling Station Finder"
+        referrerpolicy="no-referrer-when-downgrade" allowfullscreen loading="lazy" src="about:blank"></iframe>
+      <div id="maps-placeholder" class="maps-placeholder">
+        <div class="maps-ph-icon">🗺️</div>
+        <p>Use the search above or click the Google button to find your polling place</p>
+      </div>
+    </div>
+
+    <div class="maps-links">
+      <a href="https://vote.gov" target="_blank" rel="noopener" class="resource-link">🔗 vote.gov</a>
+      <a href="https://www.usa.gov/absentee-voting" target="_blank" rel="noopener" class="resource-link">🔗 Absentee Voting</a>
+      <a href="https://www.vote411.org" target="_blank" rel="noopener" class="resource-link">🔗 VOTE411</a>
+      <a href="https://866ourvote.org" target="_blank" rel="noopener" class="resource-link">🔗 Election Protection</a>
+    </div>
+  </div>
+
+</section>
+
+<!-- Confetti canvas -->
+<canvas id="confetti-canvas" class="confetti-canvas" aria-hidden="true"></canvas>
+
+<script src="app.js"></script>
 </body>
 </html>
