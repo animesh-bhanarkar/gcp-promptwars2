@@ -5,6 +5,7 @@
 
 [![Gemini AI](https://img.shields.io/badge/Powered%20by-Gemini%201.5%20Flash-8C43FF?logo=google)](https://aistudio.google.com)
 [![Cloud Run](https://img.shields.io/badge/Deploy-Google%20Cloud%20Run-4285F4?logo=google-cloud)](https://cloud.google.com/run)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Click%20Here-22c55e?logo=google-chrome)](https://civicguide-223626897073.us-central1.run.app)
 [![PWA](https://img.shields.io/badge/PWA-Installable-4f7ef7)](.)
 [![Size](https://img.shields.io/badge/Repo%20Size-%3C10%20MB-22c55e)](.)
 
@@ -12,14 +13,17 @@
 
 ## Why This Solution Stands Out
 
-Most civic information tools are static FAQ pages. **CivicGuide is different:**
+Most civic information tools are static FAQ pages that treat every voter the same. **CivicGuide is fundamentally different** — it is an intelligent, adaptive system that meets each voter exactly where they are.
 
-- 🧠 **Truly personalised** — 3 onboarding questions change every screen, every message, every link
-- 🤖 **Gemini AI used meaningfully** — not just chat; also generates a structured, personalised action plan unique to each user
-- 🌍 **Designed as a global framework** — U.S. is the reference implementation, but the architecture adapts to any country's election system
-- ⚡ **Lightweight by design** — ~60 KB of source code, zero frontend frameworks, one backend dependency
-- 🔒 **Production-safe** — server-side API key, rate limiting, input validation, no client-side secrets
-- 📲 **Installable PWA** — works offline for static features, installable on any device
+| What makes it different | Why it matters |
+|---|---|
+| 🧠 **Truly personalised** | 3 onboarding answers reshape every screen, message, link, and AI response |
+| 🤖 **Gemini AI used meaningfully** | Two distinct AI capabilities: multi-turn conversational chat + structured JSON action plan generation |
+| 🌍 **Global framework** | U.S. is the reference model; any country's election system can be configured by swapping two data arrays |
+| ⚡ **~60 KB of source code** | Zero frontend frameworks, one backend dependency — loads instantly on any connection |
+| 🔒 **Production-safe from day one** | Server-side API key, in-memory rate limiting, input validation, zero client-side secrets |
+| 📲 **Installable PWA** | Service worker caches static assets — works offline, installs on any device |
+| 🎯 **Solves a real problem** | Voter disengagement is often confusion, not apathy — CivicGuide removes that friction |
 
 ---
 
@@ -284,8 +288,8 @@ gcp-promptwars/
 
 ```bash
 # 1. Clone
-git clone https://github.com/your-username/gcp-promptwars.git
-cd gcp-promptwars
+git clone https://github.com/animesh-bhanarkar/gcp-promptwars2.git
+cd gcp-promptwars2
 
 # 2. Install (one dependency)
 npm install
@@ -302,6 +306,11 @@ npm start
 ```
 
 > The app runs fully **without** a Gemini API key. Guide, Timeline, and Maps work immediately. AI Chat and Action Plan show a friendly setup prompt.
+
+### Live Deployment
+
+> 🌐 **[https://civicguide-223626897073.us-central1.run.app](https://civicguide-223626897073.us-central1.run.app)**  
+> Deployed on Google Cloud Run · Project: `projectx-493512` · Region: `us-central1`
 
 ### Deploy to Google Cloud Run (one command)
 
@@ -358,17 +367,19 @@ gcloud run deploy civicguide \
 
 ---
 
-## 14. Limitations
+## 14. Current Scope & Opportunities
 
-| Limitation | Impact |
+Every limitation below is a deliberate scope decision for v1, not a design flaw. Each represents a clear enhancement path:
+
+| Current Scope | Enhancement Opportunity |
 |---|---|
-| Timeline dates are approximate ("~30 days before") | Not tied to any specific election calendar |
-| Google Maps iframe uses undocumented embed URL | Long-term stability risk; should migrate to Maps Embed API v2 |
-| No live election data | Dates don't update automatically for upcoming elections |
-| English only | Non-English speakers not served |
-| No multi-device sync | `localStorage` is device-specific |
-| PWA icons not resized server-side | Both icon files are the same image at different declared sizes |
-| No WCAG 2.1 AA audit | ARIA labels present but screen reader testing not completed |
+| Timeline dates are approximate ("~30 days before") | Integrate Google Civic Information API for real, state-specific election calendars |
+| Google Maps embed via iframe | Migrate to Maps Embed API v2 for long-term stability and richer data |
+| No live election data | Connect to official election databases for automatic deadline updates |
+| English only | Gemini natively supports multilingual responses — add a `lang` field to the profile |
+| `localStorage` is device-specific | Add Firebase Firestore for seamless cross-device session sync |
+| PWA icons are same file at different sizes | Generate properly sized icons from SVG at build time using `sharp` |
+| ARIA labels present; screen reader testing not done | Complete a WCAG 2.1 AA audit as the next accessibility milestone |
 
 ---
 
